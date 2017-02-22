@@ -10,23 +10,23 @@
     $stateProvider
       .state('dbox', {
         url: '/dbox',
-        templateUrl: 'app/dbox/index.html',
+        templateUrl: 'app/d4pkg-dbox/index.html',
       })
       .state('dbox.bar', {
         url: '/bar',
-        templateUrl: 'app/dbox/bar/bar.html',
+        templateUrl: 'app/d4pkg-dbox/bar/bar.html',
         controller: 'BarController',
         controllerAs: 'vm'
       })
       .state('dbox.scatter', {
         url: '/scatter',
-        templateUrl: 'app/dbox/scatter/scatter.html',
+        templateUrl: 'app/d4pkg-dbox/scatter/scatter.html',
         controller: 'ScatterController',
         controllerAs: 'vm'
       })
       .state('dbox.timeline', {
         url: '/timeline',
-        templateUrl: 'app/dbox/timeline/timeline.html',
+        templateUrl: 'app/d4pkg-dbox/timeline/timeline.html',
         controller: 'TimelineController',
         controllerAs: 'vm'
       });

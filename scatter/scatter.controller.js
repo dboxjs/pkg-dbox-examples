@@ -69,7 +69,7 @@
     }
 
     var chart = dbox.chart(config)
-                  .data({'tsv':'app/dbox/data/data.tsv'})
+                  .data({'tsv':'app/d4pkg-dbox/data/data.tsv'})
                 .layer(dbox.scatter)
                   .x('sepalWidth')
                   .y('sepalLength')
