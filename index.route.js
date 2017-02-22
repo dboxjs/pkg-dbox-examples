@@ -29,6 +29,12 @@
         templateUrl: 'app/d4pkg-dbox/timeline/timeline.html',
         controller: 'TimelineController',
         controllerAs: 'vm'
+      })
+      .state('dbox.treemap', {
+        url: '/treemap',
+        templateUrl: 'app/d4pkg-dbox/treemap/treemap.html',
+        controller: 'TreemapController',
+        controllerAs: 'vm'
       });
 
 
