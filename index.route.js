@@ -29,6 +29,12 @@
         templateUrl: 'app/d4pkg-dbox/timeline/timeline.html',
         controller: 'TimelineController',
         controllerAs: 'vm'
+      })
+      .state('dbox.heatmap', {
+        url: '/heatmap',
+        templateUrl: 'app/d4pkg-dbox/heatmap/heatmap.html',
+        controller: 'HeatmapController',
+        controllerAs: 'vm'
       });
 
 
