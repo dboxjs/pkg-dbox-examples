@@ -35,6 +35,12 @@
         templateUrl: 'app/d4pkg-dbox/heatmap/heatmap.html',
         controller: 'HeatmapController',
         controllerAs: 'vm'
+      })
+      .state('dbox.treemap', {
+        url: '/treemap',
+        templateUrl: 'app/d4pkg-dbox/treemap/treemap.html',
+        controller: 'TreemapController',
+        controllerAs: 'vm'
       });
 
 
