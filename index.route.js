@@ -10,35 +10,35 @@
     $stateProvider
       .state('dbox', {
         url: '/dbox',
-        templateUrl: 'app/d4pkg-dbox/index.html',
+        templateUrl: 'app/pkg-dbox-examples/index.html',
       })
       .state('dbox.bar', {
         url: '/bar',
-        templateUrl: 'app/d4pkg-dbox/bar/bar.html',
+        templateUrl: 'app/pkg-dbox-examples/bar/bar.html',
         controller: 'BarController',
         controllerAs: 'vm'
       })
       .state('dbox.scatter', {
         url: '/scatter',
-        templateUrl: 'app/d4pkg-dbox/scatter/scatter.html',
+        templateUrl: 'app/pkg-dbox-examples/scatter/scatter.html',
         controller: 'ScatterController',
         controllerAs: 'vm'
       })
       .state('dbox.timeline', {
         url: '/timeline',
-        templateUrl: 'app/d4pkg-dbox/timeline/timeline.html',
+        templateUrl: 'app/pkg-dbox-examples/timeline/timeline.html',
         controller: 'TimelineController',
         controllerAs: 'vm'
       })
       .state('dbox.heatmap', {
         url: '/heatmap',
-        templateUrl: 'app/d4pkg-dbox/heatmap/heatmap.html',
+        templateUrl: 'app/pkg-dbox-examples/heatmap/heatmap.html',
         controller: 'HeatmapController',
         controllerAs: 'vm'
       })
       .state('dbox.treemap', {
         url: '/treemap',
-        templateUrl: 'app/d4pkg-dbox/treemap/treemap.html',
+        templateUrl: 'app/pkg-dbox-examples/treemap/treemap.html',
         controller: 'TreemapController',
         controllerAs: 'vm'
       });

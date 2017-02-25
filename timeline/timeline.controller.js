@@ -22,7 +22,7 @@
     }
 
     var chart = dbox.chart(config)
-                  .data({'tsv':'app/d4pkg-dbox/data/airbus_data.tsv'})
+                  .data({'tsv':'app/pkg-dbox-examples/data/airbus_data.tsv'})
                 .layer(dbox.timeline)
                   .x('date')
                   .series(['Airbus', 'Boeing'])

@@ -26,7 +26,7 @@
     }
 
     chart = dbox.chart(config)
-        .data({'csv':'app/d4pkg-dbox/data/heatmap.csv'})
+        .data({'csv':'app/pkg-dbox-examples/data/heatmap.csv'})
       .layer(dbox.heatmap)
       .end()
         .draw();

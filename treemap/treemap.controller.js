@@ -27,7 +27,7 @@
 
     dbox.chart(config)
           .bindTo('#chart1')
-          .data({'tsv':'app/d4pkg-dbox/data/test.tsv'})
+          .data({'tsv':'app/pkg-dbox-examples/data/test.tsv'})
         .layer(dbox.treemap)
           .nestBy(['variable','category','subcategory'])
           .size('number')
@@ -36,7 +36,7 @@
       
     dbox.chart(config)
         .bindTo('#chart2')
-        .data({'tsv':'app/d4pkg-dbox/data/test.tsv'})
+        .data({'tsv':'app/pkg-dbox-examples/data/test.tsv'})
       .layer(dbox.treemap)
         .nestBy(['variable','category'])
         .size('number')
@@ -46,7 +46,7 @@
     
     dbox.chart(config)
         .bindTo('#chart3')
-        .data({'tsv':'app/d4pkg-dbox/data/test.tsv'})
+        .data({'tsv':'app/pkg-dbox-examples/data/test.tsv'})
     .layer(dbox.treemap)
       .nestBy(['variable'])
       .size('number')
