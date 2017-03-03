@@ -25,9 +25,14 @@
       }
     }
 
+    console.log(["12", "13", "14", "15", "16", "17"].reverse())
+
     chart = dbox.chart(config)
-        .data({'csv':'app/pkg-dbox-examples/data/heatmap.csv'})
+        .data({'csv':'app/components/heatmap/heatmap.csv'})
       .layer(dbox.heatmap)
+        .x(["12", "13", "14", "15", "16", "17", "18","19","20","21","22","23","24","25","26+"])
+        .y(["12", "13", "14", "15", "16", "17"].reverse())
+        .colors(['#e2b136','#d79435', '#b03735','#7f2e60','#622b59'])
       .end()
         .draw();
 

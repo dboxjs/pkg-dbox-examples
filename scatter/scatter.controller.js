@@ -9,56 +9,6 @@
   function ScatterController($timeout) {
     var vm = this;
 
-
-    var config = {
-      'bindTo': '#chart',
-      'size':{
-        'width':960,
-        'height':500,
-        'margin':{top: 20, right: 20, bottom: 30, left: 40},
-      },
-      /*'data':{
-        'tsv':'app/dbox/data/data.tsv',
-        'cartodb':{
-          //'raw':dataFromCartoDB,
-          'query':'SELECT * FROM d4_total_remitances WHERE '
-        },
-        'parser':function(d) {
-          var n = {};
-          n.x = +d.sepalWidth;
-          n.y = +d.sepalLength;
-          n.color = d.species;
-          //n.tooltip = {};
-          //n.legend = {};
-          return n;
-        },
-        'mouseover':function(d,i){
-          //console.log(d,i)
-        }
-      }*/
-    }
-
-    /*var scatter = dbox.scatter(config);
-    scatter.drawAxes = function(){
-      var vm = this;
-
-      vm._chart._svg.append("g")
-          .attr("class", "x axis")
-          .attr("transform", "translate(0," + vm._chart._height + ")")
-          .call(vm._axes.x)
-        .append("text")
-          .attr("class", "label")
-          .attr("x", vm._chart._width)
-          .attr("y", -6)
-          .style("text-anchor", "end")
-          .style("fill", "black")
-          .text("Sepal Width (cm)");
-    };
-
-    scatter.generate();*/
-
-
-
     var config = {
       'bindTo': '#chart',
       'size':{
@@ -78,7 +28,35 @@
                   .draw();
 
 
+    d3.select("#code").select("code")
+      .each(function(d) {
+        var code = d3.select(this);
+          d3.text("/app/pkg-dbox-examples/scatter/scatter.code.html", function(error, content) {
+            if (error) content = "Sorry, an error occurred.";
+            code.text(content);
+            hljs.highlightBlock(code.node());
+          });
+        })
 
+    /*d3.select("#code")
+      .each(function(d){
+        var code = d3.select(this);
+        d3.text("/app/pkg-dbox-examples/scatter/scatter.code.html", function(error, content) {
+          if (error) content = "Sorry, an error occurred.";
+          console.log(content);
+          code.html(new showdown.Converter().makeHtml(content));
+          code.selectAll("code").each(function() { hljs.highlightBlock(this); });
+        });
+      })*/
+
+    d3.select("#data").select("code")
+      .each(function(d) {
+        var code = d3.select(this);
+          d3.text("/app/pkg-dbox-examples/scatter/scatter.data.tsv", function(error, content) {
+            if (error) content = "Sorry, an error occurred.";
+            code.html(content);
+          });
+        })
 
   }
 })();
