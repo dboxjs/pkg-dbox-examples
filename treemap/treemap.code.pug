@@ -28,24 +28,3 @@ script.
         .format(',.0f')
       .end()
         .draw();
-
-  dbox.chart(config)
-        .bindTo('#chart2')
-        .data({'tsv':'app/pkg-dbox-examples/data/test.tsv'})
-      .layer(dbox.treemap)
-        .nestBy(['variable','category'])
-        .size('number')
-        .colorScale(colors)
-        .format(',.0f')
-      .end()
-        .draw();
-
-  dbox.chart(config)
-        .bindTo('#chart3')
-        .data({'tsv':'app/pkg-dbox-examples/data/test.tsv'})
-      .layer(dbox.treemap)
-        .nestBy(['variable'])
-        .size('number')
-        .format(',.0f')
-      .end()
-        .draw();
