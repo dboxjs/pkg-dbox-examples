@@ -1,8 +1,12 @@
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-	typeof define === 'function' && define.amd ? define(['exports'], factory) :
-	(factory((global.dbox = global.dbox || {})));
-}(this, (function (exports) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('cartodb'), require('d3'), require('lodash'), require('textures')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'cartodb', 'd3', 'lodash', 'textures'], factory) :
+  (factory((global.dbox = global.dbox || {}),global.cartodb,global.d3,global._,global.textures));
+}(this, (function (exports,cartodb,d3,_,textures) { 'use strict';
+
+/*
+ * CartoDB helper function
+ */
 
 var carto = function() {
 
@@ -34,17 +38,22 @@ var carto = function() {
   return carto;
 };
 
+/*
+ * Dbox Chart core
+ */
+
 var chart = function(config) {
 
   function Chart(config){
     var vm = this;
-    vm._config = config ? _.cloneDeep(config) : {size: {}};
+    var defaultConfig = {size: {width: 800, height: 600, margin: {left: 0, right: 0, top: 0, bottom: 0}}};
+    vm._config = config ? _.cloneDeep(config) : defaultConfig;
     vm._data = [];
-    vm._margin = vm._config.size.margin ? vm._config.size.margin : {left: 0, right: 0, top: 0, bottom: 0};
+    vm._margin = vm._config.size.margin;
 
     //Define width and height
-    vm._width = vm._config.size.width ? vm._config.size.width - vm._margin.left - vm._margin.right : 800;
-    vm._height = vm._config.size.height ? vm._config.size.height - vm._margin.top - vm._margin.bottom : 600;
+    vm._width = vm._config.size.width - vm._margin.left - vm._margin.right;
+    vm._height = vm._config.size.height - vm._margin.top - vm._margin.bottom;
     vm._svg = '';
     vm._scales ={};
     vm._axes = {};
@@ -58,6 +67,39 @@ var chart = function(config) {
   Chart.prototype.config = function(config){
     var vm = this;
     vm._config = _.cloneDeep(config);
+    return vm;
+  };
+
+  Chart.prototype.size = function(sizeObj) {
+    var vm = this;
+    if (sizeObj) {
+      if(sizeObj.margin) {
+        if(sizeObj.margin.left == Number(sizeObj.margin.left)) {
+          vm._config.size.margin.left = sizeObj.margin.left;
+          vm._margin.left = sizeObj.margin.left;
+        }
+        if(sizeObj.margin.right == Number(sizeObj.margin.right)) {
+          vm._config.size.margin.right = sizeObj.margin.right;
+          vm._margin.right = sizeObj.margin.right;
+        }
+        if(sizeObj.margin.top == Number(sizeObj.margin.top)) {
+          vm._config.size.margin.top = sizeObj.margin.top;
+          vm._margin.top = sizeObj.margin.top;
+        }
+        if(sizeObj.margin.bottom == Number(sizeObj.margin.bottom)) {
+          vm._config.size.margin.bottom = sizeObj.margin.bottom;
+          vm._margin.bottom = sizeObj.margin.bottom;
+        }
+      }
+      if(sizeObj.width == Number(sizeObj.width)) {
+        vm._config.size.width = sizeObj.width;
+        vm._width = sizeObj.width;
+      }
+      if(sizeObj.height == Number(sizeObj.height)) {
+        vm._config.size.height = sizeObj.height;
+        vm._height = sizeObj.height;
+      }
+    }
     return vm;
   };
 
@@ -93,9 +135,9 @@ var chart = function(config) {
     }
   };
 
-  Chart.prototype.getLayer = function(layer){
+  Chart.prototype.getLayer = function(layerIndex){
     var vm = this;
-    return vm.layers[layer];
+    return vm.layers[layerIndex];
   };
 
   Chart.prototype.draw =function(){
@@ -108,17 +150,14 @@ var chart = function(config) {
     q = vm.loadData();
 
     q.await(function(error,data){
-      if (error) {
+      if (error)
         throw error;
-        return false;
-      }
+
       vm._data = data;
       vm.drawSVG();
-      if(vm._config.grid == true) {
-        vm.drawGrid();
-      }
+
       vm.drawGraphs();
-      vm.drawAxes();
+      //vm.drawAxes();
 
       //Trigger load chart event
       if( vm._config.events && vm._config.events.load){
@@ -126,7 +165,7 @@ var chart = function(config) {
       }
 
     });
-
+    return vm;
   };
 
   //----------------------
@@ -151,12 +190,12 @@ var chart = function(config) {
 
         case 'ordinal':
           scales.x = d3.scaleOrdinal()
-            .rangeBands([0, vm._width], 0.1);
+            .range([0, vm._width], 0.1);
         break;
 
             case 'quantile':
               scales.x = d3.scaleOrdinal()
-                .rangeBands([0, vm._width], 0.1);
+                .range([0, vm._width], 0.1);
 
               scales.q = d3.scaleQuantile()
                 .range(d3.range(vm._config.xAxis.buckets) );
@@ -187,12 +226,12 @@ var chart = function(config) {
 
         case 'ordinal':
           scales.y = d3.scaleOrdinal()
-            .rangeBands([vm._height, 0], 0.1);
+            .range([vm._height, 0], 0.1);
         break;
 
         case 'quantile':
           scales.y = d3.scaleOrdinal()
-            .rangeBands([0, vm._width], 0.1);
+            .range([0, vm._width], 0.1);
 
           scales.q = d3.scaleQuantile()
             .range(d3.range(vm._config.yAxis.buckets) );
@@ -212,6 +251,64 @@ var chart = function(config) {
     scales.color = d3.scaleOrdinal(d3.schemeCategory10);
 
     return scales;
+  };
+
+  Chart.prototype.generateScale = function(data, config){
+    var vm = this;
+    var scale = {};
+    if(!config.range) {
+      throw 'Range is not defined';
+    }
+
+    var domains = d3.extent(data, function(d){ return +d[config.column]});
+    if(config.minZero){
+      domains = [0, d3.max(data, function(d){ return +d[config.column]})];
+    }
+    if(config.type){
+      switch(config.type){
+        case 'linear':
+          scale = d3.scaleLinear()
+            .rangeRound(config.range)
+            .domain(domains);
+        break;
+
+        case 'time':
+          scale = d3.scaleTime()
+            .range(config.range)
+            .domain(domains);
+        break;
+
+        case 'ordinal':
+          scale = d3.scaleBand()
+            .rangeRound(config.range)
+            .padding(0.1)
+            .domain(data.map(function(d){ return d[config.column]}));
+        break;
+
+        case 'quantile':
+          scale = d3.scaleBand()
+            .rangeRound(config.range)
+            .padding(0.1)
+            .domain(data.map(function(d){ return d[config.column]}));
+          if(!config.bins)
+            config.bins = 10;
+          scale = d3.scaleQuantile()
+            .range(d3.range(config.bins));
+        break;
+
+        default:
+          scale = d3.scaleLinear()
+            .rangeRound(config.range)
+            .domain(domains);
+        break;
+      }
+    }else{
+      scale = d3.scaleLinear()
+            .rangeRound(config.range)
+            .domain(domains);
+    }
+
+    return scale;
   };
 
   Chart.prototype.axes = function(){
@@ -241,29 +338,30 @@ var chart = function(config) {
 
   Chart.prototype.loadData = function(){
     var vm = this;
+    var q;
 
     if(vm._config.data.tsv){
-      var q = d3.queue()
-                .defer(d3.tsv, vm._config.data.tsv);
+      q = d3.queue()
+            .defer(d3.tsv, vm._config.data.tsv);
     }
 
     if(vm._config.data.json){
-      var q = d3.queue()
-                .defer(d3.json, vm._config.data.json);
+      q = d3.queue()
+            .defer(d3.json, vm._config.data.json);
     }
 
     if(vm._config.data.csv){
-        var q = d3.queue()
-                .defer(d3.csv, vm._config.data.csv);
+      q = d3.queue()
+            .defer(d3.csv, vm._config.data.csv);
     }
 
     if(vm._config.data.raw){
-        var q = d3.queue()
-                .defer(vm.mapData, vm._config.data.raw);
+      q = d3.queue()
+            .defer(vm.mapData, vm._config.data.raw);
     }
 
     if(vm._config.data.cartodb){
-      var q = d3.queue()
+      q = d3.queue()
             .defer(carto.query,vm._config.data);
     }
 
@@ -278,7 +376,6 @@ var chart = function(config) {
         }
       });
     }
-
 
     return q;
   };
@@ -356,7 +453,6 @@ var chart = function(config) {
 
   Chart.prototype.drawGrid = function() {
     var vm = this;
-    console.log(vm.layers[0]._scales);
     return vm;
   };
 
@@ -447,7 +543,6 @@ var chart = function(config) {
 
   Chart.prototype.drawGraphs = function(){
     var vm = this;
-
     vm.layers.forEach(function(gr){
       gr.data(vm._data)
         .scales(vm._scales)
@@ -611,53 +706,57 @@ var chart = function(config) {
   return new Chart(config);
 };
 
+/*
+ * Simple Scatter chart
+ */
+
 var scatter = function(config) {
 
-  function Scatter(config){
+  function Scatter(config) {
     var vm = this;
     vm._config = config ? config : {};
     vm._data = [];
-    vm._scales ={};
+    vm._scales = {};
     vm._axes = {};
     //vm._tip = d3.tip().attr('class', 'd3-tip').html(vm._config.data.tip);
   }
 
   //-------------------------------
   //User config functions
-  Scatter.prototype.x = function(col){
+  Scatter.prototype.x = function(col) {
     var vm = this;
     vm._config.x = col;
     return vm;
   };
 
-  Scatter.prototype.y = function(col){
+  Scatter.prototype.y = function(col) {
     var vm = this;
     vm._config.y = col;
     return vm;
   };
 
-  Scatter.prototype.color = function(col){
+  Scatter.prototype.color = function(col) {
     var vm = this;
     vm._config.color = col;
     return vm;
   };
 
-  Scatter.prototype.end = function(){
+  Scatter.prototype.end = function() {
     var vm = this;
     return vm._chart;
   };
 
   //-------------------------------
   //Triggered by the chart.js;
-  Scatter.prototype.chart = function(chart){
+  Scatter.prototype.chart = function(chart) {
     var vm = this;
     vm._chart = chart;
     return vm;
   };
 
-  Scatter.prototype.data = function(data){
+  Scatter.prototype.data = function(data) {
     var vm = this;
-    vm._data = data.map(function(d){
+    vm._data = data.map(function(d) {
       var m = {};
       m.x = +d[vm._config.x];
       m.y = +d[vm._config.y];
@@ -667,42 +766,46 @@ var scatter = function(config) {
     return vm;
   };
 
-  Scatter.prototype.scales = function(s){
+  Scatter.prototype.scales = function(s) {
     var vm = this;
     vm._scales = s;
     return vm;
   };
 
-  Scatter.prototype.axes = function(a){
+  Scatter.prototype.axes = function(a) {
     var vm = this;
     vm._axes = a;
     return vm;
   };
 
-  Scatter.prototype.domains = function(){
+  Scatter.prototype.domains = function() {
     var vm = this;
-    var xMinMax = d3.extent(vm._data, function(d) { return d.x; }),
-        yMinMax=d3.extent(vm._data, function(d) { return d.y; });
-    var arrOk = [0,0];
+    var xMinMax = d3.extent(vm._data, function(d) {
+        return d.x;
+      }),
+      yMinMax = d3.extent(vm._data, function(d) {
+        return d.y;
+      });
+    var arrOk = [0, 0];
 
-    if(vm._config.fixTo45){
-      if(xMinMax[1] > yMinMax[1]){
+    if (vm._config.fixTo45) {
+      if (xMinMax[1] > yMinMax[1]) {
         arrOk[1] = xMinMax[1];
-      }else{
+      } else {
         arrOk[1] = yMinMax[1];
       }
 
-      if(xMinMax[0] < yMinMax[0]){
+      if (xMinMax[0] < yMinMax[0]) {
         //yMinMax = xMinMax;
         arrOk[0] = xMinMax[0];
-      }else{
+      } else {
         arrOk[0] = yMinMax[0];
       }
 
       vm._scales.x.domain(arrOk).nice();
       vm._scales.y.domain(arrOk).nice();
 
-    }else{
+    } else {
       vm._scales.x.domain(xMinMax).nice();
       vm._scales.y.domain(yMinMax).nice();
     }
@@ -710,37 +813,44 @@ var scatter = function(config) {
     return vm;
   };
 
-  Scatter.prototype.draw = function(){
+  Scatter.prototype.draw = function() {
     var vm = this;
 
     console.log(vm, vm._scales, vm._scales.y(6.3));
 
     var circles = vm._chart._svg.selectAll(".dot")
-        .data(vm._data)
-        //.data(vm._data, function(d){ return d.key})
+      .data(vm._data)
+      //.data(vm._data, function(d){ return d.key})
       .enter().append("circle")
-        .attr("class", "dot")
-        .attr("r", 5)
-        .attr("cx", function(d) { return vm._scales.x(d.x); })
-        .attr("cy", function(d) { console.log(d, vm._scales, vm._scales.y(d.y) ); return vm._scales.y(d.y); })
-        .style("fill", function(d) { return vm._scales.color(d.color); })
-        .on('mouseover', function(d,i){
-          if(vm._config.mouseover){
-            vm._config.mouseover.call(vm, d,i);
-          }
-          //vm._chart._tip.show(d, d3.select(this).node());
-        })
-        .on('mouseout', function(d,i){
-          if(vm._config.mouseout){
-            vm._config.mouseout.call(this, d,i);
-          }
-          //vm._chart._tip.hide();
-        })
-        .on("click", function(d,i){
-          if(vm._config.onclick){
-            vm._config.onclick.call(this, d, i);
-          }
-        });
+      .attr("class", "dot")
+      .attr("r", 5)
+      .attr("cx", function(d) {
+        return vm._scales.x(d.x);
+      })
+      .attr("cy", function(d) {
+        console.log(d, vm._scales, vm._scales.y(d.y));
+        return vm._scales.y(d.y);
+      })
+      .style("fill", function(d) {
+        return vm._scales.color(d.color);
+      })
+      .on('mouseover', function(d, i) {
+        if (vm._config.mouseover) {
+          vm._config.mouseover.call(vm, d, i);
+        }
+        //vm._chart._tip.show(d, d3.select(this).node());
+      })
+      .on('mouseout', function(d, i) {
+        if (vm._config.mouseout) {
+          vm._config.mouseout.call(this, d, i);
+        }
+        //vm._chart._tip.hide();
+      })
+      .on("click", function(d, i) {
+        if (vm._config.onclick) {
+          vm._config.onclick.call(this, d, i);
+        }
+      });
 
     return vm;
   };
@@ -748,9 +858,13 @@ var scatter = function(config) {
   return new Scatter(config);
 };
 
+/* Simple timeline example
+ * Single and multiline timelines
+ */
+
 var timeline = function(config) {
 
-  var parseDate = d3.timeParse("%Y-%m-%d");
+  var parseDate = d3.timeParse('%Y-%m-%d');
 
   function Timeline(config){
     var vm = this;
@@ -883,7 +997,7 @@ var timeline = function(config) {
   Timeline.prototype.draw = function(){
     var vm = this;
 
-    var lines = vm._chart._svg.selectAll(".lines")
+    var lines$$1 = vm._chart._svg.selectAll(".lines")
       .data(vm._lines)
     .enter().append("g")
       .attr("class", "lines");
@@ -1207,9 +1321,9 @@ var heatmap = function(config) {
     return vm;
   };
 
-  Heatmap.prototype.tip = function(tip){
+  Heatmap.prototype.tip = function(tip$$1){
     var vm = this;
-    vm._config.tip = tip;
+    vm._config.tip = tip$$1;
     vm._tip.html(vm._config.tip);
     return vm;
   };
@@ -1368,46 +1482,49 @@ var heatmap = function(config) {
   return new Heatmap(config);
 };
 
-var treemap = function(config) {
+/* Simple SVG Treemap example
+ */
+
+var treemap$1 = function(config) {
   function Treemap(config) {
     var vm = this;
     vm._config = config ? config : {};
-    vm._config._padding    = 3;
+    vm._config._padding = 3;
     vm._config._colorScale = d3.scaleOrdinal(d3.schemeCategory20c);
-    vm._config._format     = d3.format(",.1f");
-    vm._config._labels     = true;
-    vm._config.tip = function(d) { return d.data.name + "\n" + vm._config._format(d.value); };
-    vm._data   = [];
+    vm._config._format = d3.format(",.1f");
+    vm._config._labels = true;
+    vm._config.tip = function(d) {
+      return d.data.name + "\n" + vm._config._format(d.value);
+    };
+    vm._data = [];
     vm._scales = {};
-    vm._axes   = {};
+    vm._axes = {};
     vm._tip = d3.tip()
-                .attr('class', 'd3-tip tip-treemap')
-                //.rootElement(document.getElementById(vm._config.bindTo))
-                .direction('n')
-                //.offset(function(d){ return [d3.select(vm._config.bindTo).node().offsetParent.offsetTop - 5735,0];})
-                .html(vm._config.tip);
+      .attr('class', 'd3-tip tip-treemap')
+      .direction('n')
+      .html(vm._config.tip);
   }
 
   //-------------------------------
   //User config functions
-  Treemap.prototype.end = function(){
+  Treemap.prototype.end = function() {
     var vm = this;
     return vm._chart;
   };
 
-  Treemap.prototype.size = function(col){
+  Treemap.prototype.size = function(col) {
     var vm = this;
     vm._config._size = col;
     return vm;
   };
 
-  Treemap.prototype.colorScale = function(arrayOfColors){
+  Treemap.prototype.colorScale = function(arrayOfColors) {
     var vm = this;
     vm._config._colorScale = d3.scaleOrdinal(arrayOfColors);
     return vm;
   };
 
-  Treemap.prototype.padding = function(padding){
+  Treemap.prototype.padding = function(padding) {
     var vm = this;
     vm._config._padding = padding;
     return vm;
@@ -1415,14 +1532,14 @@ var treemap = function(config) {
 
   Treemap.prototype.nestBy = function(keys) {
     var vm = this;
-    if(Array.isArray(keys)) {
-      if(keys.length == 0)
+    if (Array.isArray(keys)) {
+      if (keys.length == 0)
         throw "Error: nestBy() array is empty";
       vm._config._keys = keys;
-    } else if(typeof keys === 'string' || keys instanceof String) {
+    } else if (typeof keys === 'string' || keys instanceof String) {
       vm._config._keys = [keys];
     } else {
-      if(keys == undefined || keys == null)
+      if (keys == undefined || keys == null)
         throw "Error: nestBy() expects column names to deaggregate data";
       vm._config._keys = [keys.toString()];
       console.warning("nestBy() expected name of columns. Argument will be forced to string version .toString()");
@@ -1431,12 +1548,12 @@ var treemap = function(config) {
     return vm;
   };
 
-  Treemap.prototype.format = function(format){
+  Treemap.prototype.format = function(format$$1) {
     var vm = this;
-    if (typeof format == 'function' || format instanceof Function)
-      vm._config._format = format;
+    if (typeof format$$1 == 'function' || format$$1 instanceof Function)
+      vm._config._format = format$$1;
     else
-      vm._config._format = d3.format(format);
+      vm._config._format = d3.format(format$$1);
     return vm;
   };
 
@@ -1446,45 +1563,45 @@ var treemap = function(config) {
     return vm;
   };
 
-  Treemap.prototype.tip = function(tip){
+  Treemap.prototype.tip = function(tip$$1) {
     var vm = this;
-    vm._config.tip = tip;
+    vm._config.tip = tip$$1;
     vm._tip.html(vm._config.tip);
     return vm;
   };
 
   //-------------------------------
   //Triggered by the chart.js;
-  Treemap.prototype.chart = function(chart){
+  Treemap.prototype.chart = function(chart) {
     var vm = this;
     vm._chart = chart;
     return vm;
   };
 
-  Treemap.prototype.scales = function(scales){
+  Treemap.prototype.scales = function() {
     var vm = this;
     return vm;
   };
 
-  Treemap.prototype.axes = function(axes){
+  Treemap.prototype.axes = function() {
     var vm = this;
     return vm;
   };
 
-  Treemap.prototype.domains = function(){
+  Treemap.prototype.domains = function() {
     var vm = this;
     return vm;
   };
 
-  Treemap.prototype.isValidStructure = function(datum){
+  Treemap.prototype.isValidStructure = function(datum) {
     var vm = this;
-    if((typeof datum.name === 'string' || datum.name instanceof String) && Array.isArray(datum.children)) {
+    if ((typeof datum.name === 'string' || datum.name instanceof String) && Array.isArray(datum.children)) {
       var res = true;
       datum.children.forEach(function(child) {
         res = res && vm.isValidStructure(child);
       });
       return res;
-    } else if((typeof datum.name === 'string' || datum.name instanceof String) && Number(datum[vm._config._size]) == datum[vm._config._size]) {
+    } else if ((typeof datum.name === 'string' || datum.name instanceof String) && Number(datum[vm._config._size]) == datum[vm._config._size]) {
       return true;
     } else {
       return false;
@@ -1493,50 +1610,56 @@ var treemap = function(config) {
 
   Treemap.prototype.formatNestedData = function(data) {
     var vm = this;
-    if(data.key) {
+    if (data.key) {
       data.name = data.key;
       delete data.key;
     } else {
-      if(!Array.isArray(data.values)) {
+      if (!Array.isArray(data.values)) {
         data.name = data[vm._config._labelName];
       }
     }
-    if(Array.isArray(data.values)) {
+    if (Array.isArray(data.values)) {
       var children = [];
-      data.values.forEach(function(v){
+      data.values.forEach(function(v) {
         children.push(vm.formatNestedData(v));
       });
       data.children = children;
       delete data.values;
     }
-    if(!data[vm._config._size] && data.value){
+    if (!data[vm._config._size] && data.value) {
       data[vm._config._size] = data.value;
     }
     return data;
   };
 
-  function nestKey(nest, key, callback){
-    callback(null,nest.key(function(d){ return d[key]; }));
+  function nestKey(nest$$1, key, callback) {
+    callback(null, nest$$1.key(function(d) {
+      return d[key];
+    }));
   }
 
-  Treemap.prototype.data = function(data){
+  Treemap.prototype.data = function(data) {
     var vm = this;
     // Validate structure like [{name: '', children: [{},{}]}]
-    if(data){
-      if(Array.isArray(data) && data.length > 0) {
-        if(!vm.isValidStructure(data[0])) {
-          data.forEach(function(d){
+    if (data) {
+      if (Array.isArray(data) && data.length > 0) {
+        if (!vm.isValidStructure(data[0])) {
+          data.forEach(function(d) {
             d[vm._config._size] = +d[vm._config._size];
           });
           try {
-            if(!vm._config._keys)
+            if (!vm._config._keys)
               throw "nestBy() in layer was not configured";
             var nested = d3.nest();
-            var queue = d3.queue();
-            for(var i = 0; i < vm._config._keys.length; i++)
-              queue.defer(nestKey, nested, vm._config._keys[i]);
-            queue.awaitAll(function(error, nested) {
-              var nestedData = nested[0].rollup(function(leaves) { return d3.sum(leaves, function(d) {return d[vm._config._size];})}).entries(data);
+            var queue$$1 = d3.queue();
+            for (var i = 0; i < vm._config._keys.length; i++)
+              queue$$1.defer(nestKey, nested, vm._config._keys[i]);
+            queue$$1.awaitAll(function(error, nested) {
+              var nestedData = nested[0].rollup(function(leaves) {
+                return d3.sum(leaves, function(d) {
+                  return d[vm._config._size];
+                })
+              }).entries(data);
               var aux = {};
               aux.key = 'data';
               aux.values = _.cloneDeep(nestedData); // WARN: Lodash dependency
@@ -1544,20 +1667,20 @@ var treemap = function(config) {
               vm._data = data;
             });
 
-          } catch(err){
+          } catch (err) {
             console.error(err);
           }
         }
       } else {
-        if(!vm.isValidStructure(data)) {
+        if (!vm.isValidStructure(data)) {
           try {
-            if(!data.key)
+            if (!data.key)
               throw "Property 'key' not found";
-            if(data[vm._config._size] !== Number(data[vm._config._size]))
-              throw  "Value used for treemap rect size is not a number";
+            if (data[vm._config._size] !== Number(data[vm._config._size]))
+              throw "Value used for treemap rect size is not a number";
             data = vm.formatNestedData(data);
             vm._data = data;
-          } catch(err){
+          } catch (err) {
             console.error(err);
           }
         }
@@ -1566,84 +1689,104 @@ var treemap = function(config) {
     return vm;
   };
 
-  Treemap.prototype.draw = function(){
+  Treemap.prototype.draw = function() {
     var vm = this;
     vm._chart._svg.call(vm._tip);
 
-    var treemap = d3.treemap()
-        .tile(d3.treemapResquarify)
-        .size([vm._chart._width, vm._chart._height])
-        .round(true)
-        .paddingInner(vm._config._padding);
+    var treemap$$1 = d3.treemap()
+      .tile(d3.treemapResquarify)
+      .size([vm._chart._width, vm._chart._height])
+      .round(true)
+      .paddingInner(vm._config._padding);
 
     var root = d3.hierarchy(vm._data)
-        .eachBefore(function(d) { d.data.id = (d.parent ? d.parent.data.id + "." : "") + d.data.name; })
-        .sum(function(d){return d[vm._config._size];})
-        .sort(function(a, b) { return b.height - a.height || b.value - a.value; });
+      .eachBefore(function(d) {
+        d.data.id = (d.parent ? d.parent.data.id + "." : "") + d.data.name;
+      })
+      .sum(function(d) {
+        return d[vm._config._size];
+      })
+      .sort(function(a, b) {
+        return b.height - a.height || b.value - a.value;
+      });
 
-    treemap(root);
+    treemap$$1(root);
 
     var cell = vm._chart._svg.selectAll("g")
       .data(root.leaves())
       .enter().append("g")
-        .attr("transform", function(d) { return "translate(" + d.x0 + "," + d.y0 + ")"; });
+      .attr("transform", function(d) {
+        return "translate(" + d.x0 + "," + d.y0 + ")";
+      });
 
     var rect = cell.append("rect")
-        .attr("id", function(d) { return d.data.id; })
-        .attr("width", function(d) { return d.x1 - d.x0; })
-        .attr("height", function(d) { return d.y1 - d.y0; })
-        .attr("fill", function(d) { return vm._config._colorScale(d.data.id); });
+      .attr("id", function(d) {
+        return d.data.id;
+      })
+      .attr("width", function(d) {
+        return d.x1 - d.x0;
+      })
+      .attr("height", function(d) {
+        return d.y1 - d.y0;
+      })
+      .attr("fill", function(d) {
+        return vm._config._colorScale(d.data.id);
+      });
 
     cell.append("clipPath")
-        .attr("id", function(d) { return "clip-" + d.data.id; })
+      .attr("id", function(d) {
+        return "clip-" + d.data.id;
+      })
       .append("use")
-        .attr("xlink:href", function(d) { return "#" + d.data.id; });
+      .attr("xlink:href", function(d) {
+        return "#" + d.data.id;
+      });
 
-    if(vm._config._labels) {
+    if (vm._config._labels) {
       var text = cell.append("text")
-          .attr("clip-path", function(d) { return "url(#clip-" + d.data.id + ")"; });
+        .attr("clip-path", function(d) {
+          return "url(#clip-" + d.data.id + ")";
+        });
       text.append("tspan")
-          .attr('class','capitalize')
-          .attr("x", 8)
-          .attr("y", function(d, i) { return 25; })
-          .text(function(d) {
-            if(d.value > 2) {
-              var arr = d.data.id.replace('data.','').split('.');
-              return arr.length > 1 ? arr.slice(arr.length - 2, arr.length).join(' / ') : arr[arr.length - 1].toString();
-            } else
-              return '';
-          });
+        .attr('class', 'capitalize')
+        .attr("x", 8)
+        .attr("y", 25)
+        .text(function(d) {
+          if (d.value > 2) {
+            var arr = d.data.id.replace('data.', '').split('.');
+            return arr.length > 1 ? arr.slice(arr.length - 2, arr.length).join(' / ') : arr[arr.length - 1].toString();
+          } else
+            return '';
+        });
       text.append("tspan")
-          .attr('class','capitalize')
-          .attr("x", 8)
-          .attr("y", function(d, i) { return 45; })
-          .text(function(d) {
-            return d.value > 2 ? vm._config._format(d.value) : '';
-          });
+        .attr('class', 'capitalize')
+        .attr("x", 8)
+        .attr("y", 45)
+        .text(function(d) {
+          return d.value > 2 ? vm._config._format(d.value) : '';
+        });
     }
 
-    /*
-    cell.append("title")
-        .text(function(d) { return d.data.name + "\n" + vm._config._format(d.value); });
-    */
-
-    rect.on('mouseover', function(d,i){
-          /*if(vm._config.data.mouseover){
-            vm._config.data.mouseover.call(vm, d,i);
-          }*/
-          vm._tip.show(d, d3.select(this).node());
-        })
-        .on('mouseout', function(d,i){
-          /*if(vm._config.data.mouseout){
-            vm._config.data.mouseout.call(this, d,i);
-          }*/
-          vm._tip.hide(d, d3.select(this).node());
-        });
+    rect.on('mouseover', function(d) {
+        /*if(vm._config.data.mouseover){
+          vm._config.data.mouseover.call(vm, d,i);
+        }*/
+        vm._tip.show(d, d3.select(this).node());
+      })
+      .on('mouseout', function(d) {
+        /*if(vm._config.data.mouseout){
+          vm._config.data.mouseout.call(this, d,i);
+        }*/
+        vm._tip.hide(d, d3.select(this).node());
+      });
 
     return vm;
   };
   return new Treemap(config);
 };
+
+/* Mexico map rounded
+ */
 
 var mexicoMapRounded = function(config) {
 
@@ -1756,18 +1899,18 @@ var mexicoMapRounded = function(config) {
 
     var bbox,center;
 
-    var max,min = (this._circlesConfig.minPadding) ? this._circlesConfig.minPadding : 5;
+    var max$$1,min$$1 = (this._circlesConfig.minPadding) ? this._circlesConfig.minPadding : 5;
     var paddingX, paddingY,centerX,centerY;
 
     bbox = d3.select("#est_"+item[this._mapConfig.identifierKey]).node().getBBox();
 
-    max = bbox.width;
+    max$$1 = bbox.width;
 
-    paddingX = (dataStateLength > 1) ? Math.floor(Math.random()*(max-min+1) + min)/4 : 0;
+    paddingX = (dataStateLength > 1) ? Math.floor(Math.random()*(max$$1-min$$1+1) + min$$1)/4 : 0;
 
-    max = bbox.height;
+    max$$1 = bbox.height;
 
-    paddingY = (dataStateLength > 1) ? Math.floor(Math.random()*(max-min+1) + min)/4 : 0;
+    paddingY = (dataStateLength > 1) ? Math.floor(Math.random()*(max$$1-min$$1+1) + min$$1)/4 : 0;
 
     centerY = (bbox.y + bbox.height/2);
     centerX = (bbox.x + bbox.width/2);
@@ -1827,11 +1970,11 @@ var mexicoMapRounded = function(config) {
     this._tip.html(content);
   };
 
-  MexicoMapRounded.prototype.colorStates = function(domain,range,fillCallback){
+  MexicoMapRounded.prototype.colorStates = function(domain,range$$1,fillCallback){
 
     var testScale = d3.scaleQuantile()
       .domain(domain)
-      .range(range);
+      .range(range$$1);
 
     var self = this;
 
@@ -1845,13 +1988,182 @@ var mexicoMapRounded = function(config) {
   return new MexicoMapRounded(config.mapConfig,config.circlesConfig,config.tipConfig,config.callbackConfig);
 };
 
+/*
+ * Simple Bar chart
+ */
+
+var barchart = function(config) {
+
+  function Bars(config) {
+    var vm = this;
+    vm._config = config ? config : {};
+    vm._data = [];
+    vm._scales = {color: d3.scaleOrdinal(d3.schemeCategory20c)};
+    vm._axes = {};
+    //vm._tip = d3.tip().attr('class', 'd3-tip').html(vm._config.data.tip);
+  }
+
+  //-------------------------------
+  //User config functions
+  Bars.prototype.x = function(columnName) {
+    var vm = this;
+    vm._config.x = columnName;
+    return vm;
+  };
+
+  Bars.prototype.y = function(columnName) {
+    var vm = this;
+    vm._config.y = columnName;
+    return vm;
+  };
+
+  Bars.prototype.color = function(columnName) {
+    var vm = this;
+    vm._config.color = columnName;
+    return vm;
+  };
+
+  Bars.prototype.end = function() {
+    var vm = this;
+    return vm._chart;
+  };
+
+  //-------------------------------
+  //Triggered by the chart.js;
+  Bars.prototype.chart = function(chart) {
+    var vm = this;
+    vm._chart = chart;
+    return vm;
+  };
+
+  Bars.prototype.data = function(data) {
+    var vm = this;
+    vm._data = data.map(function(d) {
+      if(d[vm._config.x] == Number(d[vm._config.x]))
+        d[vm._config.x] = +d[vm._config.x];
+      if(d[vm._config.y] == Number(d[vm._config.y]))
+        d[vm._config.y] = +d[vm._config.y];
+      return d;
+    });
+    return vm;
+  };
+
+  Bars.prototype.scales = function(s) {
+    var vm = this;
+    vm._scales = s;
+    /* Use
+    * vm._config.x
+    * vm._config.xAxis.scale
+    * vm._config.y
+    * vm._config.yAxis.scale
+    * vm._data
+    */
+    /* Generate x scale */
+    var config = {
+        column: vm._config.x,
+        type: vm._config.xAxis.scale,
+        range: [0, vm._chart._width],
+        minZero: true
+    };
+    vm._scales.x = vm._chart.generateScale(vm._data, config);
+
+    /* Generate y scale */
+    config = {
+        column: vm._config.y,
+        type: vm._config.yAxis.scale,
+        range: [vm._chart._height, 0],
+        minZero: true
+    };
+    vm._scales.y = vm._chart.generateScale(vm._data, config);
+    vm._chart._scales.x = vm._scales.x;
+    vm._chart._scales.y = vm._scales.y;
+    return vm;
+  };
+
+  Bars.prototype.axes = function(a) {
+    var vm = this;
+    vm._axes = a;
+    return vm;
+  };
+
+  Bars.prototype.domains = function() {
+    var vm = this;
+    return vm;
+  };
+
+  Bars.prototype.draw = function() {
+    var vm = this;
+    //vm._chart._svg.call(vm.tip);
+
+    if(vm._config.xAxis.enabled) {
+       vm._chart._svg.append("g")
+          .attr("class", "xAxis axis")
+          .attr("transform", "translate(0," + vm._chart._height + ")")
+          .call(d3.axisBottom(vm._scales.x));
+    }
+
+    if(vm._config.yAxis.enabled) {
+      var yAxis = d3.axisLeft(vm._scales.y)
+              .ticks(vm._config.yAxis.ticks || 10);
+
+      vm._chart._svg.append("g")
+          .attr("class", "yAxis axis")
+          .call(yAxis);
+        /*
+        Axis Title
+        .append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("y", 6)
+          .attr("dy", "0.71em")
+          .attr("text-anchor", "end")
+          .text("Frequency");
+        */
+    }
+
+    vm._chart._svg.selectAll(".bar")
+        .data(vm._data)
+        .enter().append("rect")
+          .attr("class", "bar")
+          .attr("x", function(d) { return vm._config.xAxis.scale == 'linear' && vm._config.yAxis.scale == 'linear'? 0 : vm._scales.x(d[vm._config.x]); })
+          .attr("y", function(d) { return vm._scales.y(d[vm._config.y]);})
+          .attr("width", function(d){ return vm._scales.x.bandwidth ? vm._scales.x.bandwidth() : vm._scales.x(d[vm._config.x]) })
+          .attr("height", function(d) { return vm._chart._height - vm._scales.y(d[vm._config.y]); })
+          .attr("fill", function(d){ return vm._scales.color(d[vm._config.color])})
+          .on('mouseover', function() {
+
+          })
+          .on('mouseout', function() {
+
+          })
+          .on('click', function() {
+
+          });
+    return vm;
+  };
+
+  return new Bars(config);
+};
+
+/*
+ * Dboxjs
+ *
+ * You can import other modules here, including external packages. When
+ * bundling using rollup you can mark those modules as external and have them
+ * excluded or, if they have a jsnext:main entry in their package.json (like
+ * this package does), let rollup bundle them into your dist file.
+ */
+
+/* Core */
+
 exports.chart = chart;
 exports.scatter = scatter;
 exports.timeline = timeline;
 exports.heatmap = heatmap;
-exports.treemap = treemap;
+exports.treemap = treemap$1;
 exports.MexicoMapRounded = mexicoMapRounded;
+exports.bars = barchart;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
+//# sourceMappingURL=dbox.js.map

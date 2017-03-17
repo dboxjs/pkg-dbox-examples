@@ -8,7 +8,7 @@
   /** @ngInject */
   function HeatmapController($timeout) {
     var vm = this;
-    var config,chart;
+    var config, chart;
 
     config = {
       'bindTo': '#chart',
@@ -25,10 +25,8 @@
       }
     }
 
-    console.log(["12", "13", "14", "15", "16", "17"].reverse())
-
     chart = dbox.chart(config)
-        .data({'csv':'app/components/heatmap/heatmap.csv'})
+        .data({'csv':'app/pkg-dbox-examples/data/heatmap.csv'})
       .layer(dbox.heatmap)
         .x(["12", "13", "14", "15", "16", "17", "18","19","20","21","22","23","24","25","26+"])
         .y(["12", "13", "14", "15", "16", "17"].reverse())

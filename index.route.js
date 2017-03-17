@@ -12,8 +12,8 @@
         url: '/dbox',
         templateUrl: 'app/pkg-dbox-examples/index.html',
       })
-      .state('dbox.bar', {
-        url: '/bar',
+      .state('dbox.bars', {
+        url: '/barchart',
         templateUrl: 'app/pkg-dbox-examples/bar/bar.html',
         controller: 'BarController',
         controllerAs: 'vm'
@@ -40,6 +40,12 @@
         url: '/treemap',
         templateUrl: 'app/pkg-dbox-examples/treemap/treemap.html',
         controller: 'TreemapController',
+        controllerAs: 'vm'
+      })
+      .state('dbox.mapRounded', {
+        url: '/map-rounded-mexico',
+        templateUrl: 'app/pkg-dbox-examples/map-rounded/mapRounded.html',
+        controller: 'MapRoundedController',
         controllerAs: 'vm'
       });
 
