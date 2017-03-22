@@ -9,30 +9,24 @@
   function BarController($timeout) {
     var vm = this;
 
-    var config = {
-      size: {
-        width: 600,
-        height: 400,
-        margin: {top: 5, right: 5, bottom: 20, left: 20}
-      },
-      xAxis: {
-        enabled: true,
-        scale: 'ordinal'
-      },
-      yAxis: {
-        enabled: true,
-        scale: 'linear'
-      }
-    };
-    var data = [{name: 'female', x: 20, y: 35},{name: 'male', x: 30, y: 24},{name: 'NA', x: 54, y: 4}];
-
-    var chart = dbox.chart(config)
-        .bindTo('#chart')
-        .data({'raw': data})
-        .layer(dbox.bars)
-          .x('name')
-          .y('y')
-        .end()
-        .draw();
+    d3.select("#code").select("code")
+      .each(function(d) {
+        var code = d3.select(this);
+          d3.text("/app/pkg-dbox-examples/bar/bar.code.html", function(error, content) {
+            if (error) content = "Sorry, an error occurred.";
+            code.text(content);
+            hljs.highlightBlock(code.node());
+          });
+        });
+    /*
+    d3.select("#data").select("code")
+      .each(function(d) {
+        var code = d3.select(this);
+          d3.text("/app/pkg-dbox-examples/data/test.tsv", function(error, content) {
+            if (error) content = "Sorry, an error occurred.";
+            code.html(content);
+          });
+        });
+    */
   }
 })();

@@ -1998,9 +1998,15 @@ var barchart = function(config) {
     var vm = this;
     vm._config = config ? config : {};
     vm._data = [];
-    vm._scales = {color: d3.scaleOrdinal(d3.schemeCategory20c)};
+    vm._config.colorScale = d3.schemeCategory20c;
+    vm._config._format = d3.format(",.1f");
+    vm._scales = {};
     vm._axes = {};
-    //vm._tip = d3.tip().attr('class', 'd3-tip').html(vm._config.data.tip);
+    //vm._tip = d3.tip().attr('class', 'd3-tip tip-bars').html(vm._config.data.tip || function(d){ return d;});
+    vm._tip = d3.tip()
+      .attr('class', 'd3-tip tip-treemap')
+      .direction('n')
+      .html(vm._config.tip || function(d){ return vm._config._format(d[vm._config.y])});
   }
 
   //-------------------------------
@@ -2028,6 +2034,17 @@ var barchart = function(config) {
     return vm._chart;
   };
 
+  Bars.prototype.colorScale = function(colorScale) {
+    var vm = this;
+    if(Array.isArray(colorScale)) {
+      vm._config.colorScale = colorScale;  
+    } else {
+      vm._scales.color = colorScale;
+      vm._config.colorScale = colorScale.range();
+    }
+    return vm;
+  };
+
   //-------------------------------
   //Triggered by the chart.js;
   Bars.prototype.chart = function(chart) {
@@ -2050,7 +2067,7 @@ var barchart = function(config) {
 
   Bars.prototype.scales = function(s) {
     var vm = this;
-    vm._scales = s;
+    //vm._scales = s;
     /* Use
     * vm._config.x
     * vm._config.xAxis.scale
@@ -2077,6 +2094,9 @@ var barchart = function(config) {
     vm._scales.y = vm._chart.generateScale(vm._data, config);
     vm._chart._scales.x = vm._scales.x;
     vm._chart._scales.y = vm._scales.y;
+    
+    if(!vm._scales.color)
+      vm._scales.color = d3.scaleOrdinal(vm._config.colorScale);
     return vm;
   };
 
@@ -2093,18 +2113,24 @@ var barchart = function(config) {
 
   Bars.prototype.draw = function() {
     var vm = this;
-    //vm._chart._svg.call(vm.tip);
+    vm._chart._svg.call(vm._tip);
 
     if(vm._config.xAxis.enabled) {
        vm._chart._svg.append("g")
           .attr("class", "xAxis axis")
           .attr("transform", "translate(0," + vm._chart._height + ")")
-          .call(d3.axisBottom(vm._scales.x));
+          .call(d3.axisBottom(vm._scales.x)
+            .tickValues(vm._config.xAxis.tickValues)
+            .tickFormat(vm._config.xAxis.tickFormat)
+          );
+        vm._chart._svg.selectAll(".xAxis.axis text").attr("transform", "translate(0,10)rotate(-20)");
     }
 
     if(vm._config.yAxis.enabled) {
       var yAxis = d3.axisLeft(vm._scales.y)
-              .ticks(vm._config.yAxis.ticks || 10);
+              .ticks(vm._config.yAxis.ticks)
+              .tickValues(vm._config.yAxis.tickValues)
+              .tickFormat(vm._config.yAxis.tickFormat);
 
       vm._chart._svg.append("g")
           .attr("class", "yAxis axis")
@@ -2129,11 +2155,12 @@ var barchart = function(config) {
           .attr("width", function(d){ return vm._scales.x.bandwidth ? vm._scales.x.bandwidth() : vm._scales.x(d[vm._config.x]) })
           .attr("height", function(d) { return vm._chart._height - vm._scales.y(d[vm._config.y]); })
           .attr("fill", function(d){ return vm._scales.color(d[vm._config.color])})
-          .on('mouseover', function() {
-
+          .style("opacity", 0.9)
+          .on('mouseover', function(d) {
+            vm._tip.show(d, d3.select(this).node());
           })
           .on('mouseout', function() {
-
+            vm._tip.hide();
           })
           .on('click', function() {
 
