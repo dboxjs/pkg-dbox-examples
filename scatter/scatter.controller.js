@@ -24,6 +24,10 @@
                   .x('sepalWidth')
                   .y('sepalLength')
                   .color('species')
+                  .tip(function(d){
+                    console.log(d);
+                    return  'alecs'; 
+                  })
                 .end()
                   .draw();
 

@@ -12,7 +12,7 @@
         url: '/dbox',
         templateUrl: 'app/pkg-dbox-examples/index.html',
       })
-      .state('dbox.bar', {
+      .state('dbox.bars', {
         url: '/bar',
         templateUrl: 'app/pkg-dbox-examples/bar/bar.html',
         controller: 'BarController',
