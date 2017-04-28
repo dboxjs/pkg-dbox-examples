@@ -42,10 +42,10 @@
         controller: 'TreemapController',
         controllerAs: 'vm'
       })
-      .state('dbox.mapRounded', {
-        url: '/map-rounded-mexico',
-        templateUrl: 'app/pkg-dbox-examples/map-rounded/mapRounded.html',
-        controller: 'MapRoundedController',
+      .state('dbox.map', {
+        url: '/map',
+        templateUrl: 'app/pkg-dbox-examples/map/map.html',
+        controller: 'MapController',
         controllerAs: 'vm'
       });
 
