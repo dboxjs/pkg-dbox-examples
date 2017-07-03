@@ -24,6 +24,12 @@
         controller: 'ScatterController',
         controllerAs: 'vm'
       })
+      .state('dbox.map', {
+        url: '/map',
+        templateUrl: 'app/pkg-dbox-examples/map/map.html',
+        controller: 'MapController',
+        controllerAs: 'vm'
+      })
       .state('dbox.timeline', {
         url: '/timeline',
         templateUrl: 'app/pkg-dbox-examples/timeline/timeline.html',
