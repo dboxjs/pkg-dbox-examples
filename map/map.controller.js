@@ -9,7 +9,8 @@
   function MapController($timeout) {
     var vm = this;
 
-    d3.csv('app/pkg-dbox-examples/map/map.csv', function(d){
+
+    /*d3.csv('app/pkg-dbox-examples/map/map.csv', function(d){
       d.indigenaV = isNaN(d.indigena) ? 0 : +d.indigena;
       d.afroV = isNaN(d.afro) ? 0 : +d.afro;
       d.restoV = isNaN(d.resto) ? 0 : +d.resto;
@@ -38,10 +39,7 @@
         },
         'events': {
           'load': function(chart) {
-            /*reColorMap(chart);
-            var dataMap = d3.selectAll("#map path[data-geotype=\"municipalities\"]").data();
-            vm.mapData = mergeData(vm.filteredData, dataMap, 'id', 'id');
-            console.log(vm.mapData);*/
+
           }
         }
       }
@@ -94,9 +92,7 @@
                       return '#a0a0a0';
                     }
                   });
-                }/*else{
-                  vm.selectedMunicipality = undefined;
-                }*/
+                }
 
               });
             },0);
@@ -129,26 +125,27 @@
         .end()
         .draw();
 
-    }
+    }*/
 
-
-   /* d3.select("#code").select("code")
+    d3.select("#code").select("code")
       .each(function(d) {
         var code = d3.select(this);
-          d3.text("/app/pkg-dbox-examples/scatter/scatter.code.html", function(error, content) {
+          d3.text("/app/pkg-dbox-examples/map/map.code.html", function(error, content) {
             if (error) content = "Sorry, an error occurred.";
             code.text(content);
             hljs.highlightBlock(code.node());
           });
         })
-    d3.select("#data").select("code")
+    /*d3.select("#data").select("code")
       .each(function(d) {
         var code = d3.select(this);
           d3.text("/app/pkg-dbox-examples/scatter/scatter.data.tsv", function(error, content) {
             if (error) content = "Sorry, an error occurred.";
             code.html(content);
           });
-        })*/
+        })
+    */
+
 
   }
 })();
